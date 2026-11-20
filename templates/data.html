@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Data Explorer – Post-COVID GDP Recovery</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:        #07090f;
+      --surface:   #0e1420;
+      --surface2:  #141d2e;
+      --border:    #1c2b3a;
+      --border2:   #243447;
+      --accent:    #00d4aa;
+      --accent2:   #3b82f6;
+      --accent3:   #f59e0b;
+      --accent4:   #a78bfa;
+      --danger:    #f87171;
+      --text:      #dde6f0;
+      --muted:     #5a7080;
+      --muted2:    #8aa0b0;
+      --radius:    10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+    /* HEADER */
+    header {
+      background: linear-gradient(160deg, #0c1625 0%, #07090f 55%);
+      border-bottom: 1px solid var(--border);
+      padding: 44px 40px 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; left: -60px;
+      width: 280px; height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,212,170,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(0,212,170,.08);
+      border: 1px solid rgba(0,212,170,.22);
+      border-radius: 4px;
+      padding: 4px 10px;
+      margin-bottom: 16px;
+    }
+    header h1 {
+      font-size: clamp(1.8rem, 4.5vw, 3rem);
+      font-weight: 800;
+      line-height: 1.1;
+      background: linear-gradient(100deg, #dde6f0 20%, var(--accent) 80%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p { margin-top: 10px; color: var(--muted2); font-size: 0.9rem; max-width: 560px; line-height: 1.6; }
+    .breadcrumb {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 20px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted);
+    }
+    .breadcrumb a { color: var(--muted2); text-decoration: none; transition: color .2s; }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb span { color: var(--accent); }
+    .page-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .page-nav a {
+      color: var(--muted2);
+      text-decoration: none;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 13px;
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      background: rgba(14, 20, 32, .7);
+      transition: color .2s, border-color .2s, background .2s, transform .15s;
+    }
+    .page-nav a:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(0, 212, 170, .08);
+      transform: translateY(-1px);
+    }
+    @media (max-width: 480px) {
+      .page-nav a { flex: 1 1 calc(50% - 5px); text-align: center; }
+    }
+
+    /* MAIN */
+    main { max-width: 1080px; margin: 0 auto; padding: 36px 24px 0; }
+
+    /* FILTER PANEL */
+    .filter-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 32px;
+      margin-bottom: 36px;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp .5s ease both;
+    }
+    .filter-panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), transparent);
+    }
+    .filter-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--accent2); margin-bottom: 22px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .filter-title::after { content: ''; flex:1; height:1px; background: var(--border); }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 16px; align-items: end;
+    }
+    @media (max-width: 720px) {
+      .filter-grid { grid-template-columns: 1fr 1fr; }
+      .filter-grid .fetch-btn { grid-column: 1 / -1; }
+    }
+    @media (max-width: 480px) { .filter-grid { grid-template-columns: 1fr; } }
+
+    .filter-group { display: flex; flex-direction: column; gap: 7px; }
+    .filter-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--muted2);
+    }
+
+    select {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      padding: 10px 14px;
+      cursor: pointer; outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a7080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,170,.1); }
+    select option { background: #0e1420; }
+    select:disabled { opacity: .45; cursor: not-allowed; }
+
+    .fetch-btn {
+      background: linear-gradient(135deg, var(--accent) 0%, #00a888 100%);
+      color: #000;
+      font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+      padding: 11px 28px; border: none; border-radius: 7px;
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+      transition: opacity .2s, transform .15s, box-shadow .2s;
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,212,170,.25);
+    }
+    .fetch-btn:hover { opacity:.9; transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,212,170,.35); }
+    .fetch-btn:active { transform: translateY(0); }
+    .fetch-btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+
+    .active-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; min-height: 28px; }
+    .filter-pill {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      padding: 4px 12px; border-radius: 20px;
+      background: rgba(0,212,170,.1); border: 1px solid rgba(0,212,170,.25);
+      color: var(--accent); animation: popIn .2s ease;
+    }
+    @keyframes popIn { from { opacity:0; transform:scale(.85); } to { opacity:1; transform:scale(1); } }
+
+    /* RESULTS */
+    #results-area { animation: fadeUp .4s ease both .1s; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-state svg { opacity: .25; margin-bottom: 16px; }
+    .empty-state p { font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.8; }
+
+    /* STAT CARDS */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px; margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 20px;
+      position: relative; overflow: hidden;
+      animation: fadeUp .35s ease both;
+    }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .stat-card.gdp::before  { background: linear-gradient(90deg, var(--accent2), transparent); }
+    .stat-card.inf::before  { background: linear-gradient(90deg, var(--accent3), transparent); }
+    .stat-card.unemp::before{ background: linear-gradient(90deg, var(--accent4), transparent); }
+    .stat-card.val::before  { background: linear-gradient(90deg, var(--accent),  transparent); }
+    .stat-label { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted2); margin-bottom:10px; }
+    .stat-value { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+    .stat-card.gdp   .stat-value { color: var(--accent2); }
+    .stat-card.inf   .stat-value { color: var(--accent3); }
+    .stat-card.unemp .stat-value { color: var(--accent4); }
+    .stat-card.val   .stat-value { color: var(--accent); }
+    .stat-unit { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:4px; }
+    .stat-na { color: var(--muted); font-size: 1rem; }
+
+    /* TABLE SECTIONS */
+    .table-section { margin-bottom: 28px; }
+    .table-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .table-title {
+      font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:2px;
+      text-transform:uppercase; color:var(--muted2);
+      display:flex; align-items:center; gap:8px;
+    }
+    .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .dot-gdp   { background:var(--accent2); box-shadow:0 0 6px var(--accent2); }
+    .dot-inf   { background:var(--accent3); box-shadow:0 0 6px var(--accent3); }
+    .dot-unemp { background:var(--accent4); box-shadow:0 0 6px var(--accent4); }
+    .dot-val   { background:var(--accent);  box-shadow:0 0 6px var(--accent); }
+    .row-badge {
+      font-family:'IBM Plex Mono',monospace; font-size:10px;
+      padding:3px 9px; border-radius:4px;
+      background:var(--surface2); border:1px solid var(--border); color:var(--muted2);
+    }
+    .table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+    .table-scroll { overflow-x:auto; max-height:320px; overflow-y:auto; }
+    table { width:100%; border-collapse:collapse; }
+    thead tr { background:#0a1018; position:sticky; top:0; z-index:1; }
+    thead th {
+      font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.5px;
+      text-transform:uppercase; padding:11px 16px; text-align:left;
+      border-bottom:1px solid var(--border); white-space:nowrap;
+    }
+    th.gdp-col   { color:var(--accent2); }
+    th.inf-col   { color:var(--accent3); }
+    th.unemp-col { color:var(--accent4); }
+    th.val-col   { color:var(--accent); }
+    th.base-col  { color:var(--muted2); }
+    tbody tr { border-bottom:1px solid rgba(28,43,58,.7); transition:background .15s; }
+    tbody tr:last-child { border-bottom:none; }
+    tbody tr:hover { background:rgba(59,130,246,.05); }
+    tbody td { padding:10px 16px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text); white-space:nowrap; }
+    tbody td:first-child { color:var(--accent); font-weight:600; }
+    tbody td.year-col { color:var(--muted2); }
+    .no-data-row td { text-align:center; color:var(--muted); padding:24px; font-style:italic; }
+
+    /* SPINNER */
+    .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(0,212,170,.2); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-row { display:flex; align-items:center; gap:10px; padding:20px 24px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted); }
+
+    .error-box {
+      padding:16px 18px; background:rgba(248,113,113,.07); border:1px solid rgba(248,113,113,.2);
+      border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:12px;
+      color:var(--danger); display:flex; gap:10px; align-items:flex-start; line-height:1.6; margin-bottom:16px;
+    }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+    footer { text-align:center; margin-top:56px; padding-top:24px; border-top:1px solid var(--border); font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); letter-spacing:1px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-badge">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    Data Explorer
+  </div>
+  <h1>G5 Economic<br>Data Browser</h1>
+  <p>Select a country and year to instantly fetch GDP growth, inflation, unemployment &amp; GDP value from your MySQL database.</p>
+  <nav class="page-nav" aria-label="Primary navigation">
+    <a href="/">Home</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/analysis">Analysis</a>
+    <a href="/insights">Insights</a>
+  </nav>
+</header>
+
+<main>
+
+  <div class="filter-panel">
+    <div class="filter-title">Filter &amp; Fetch Data</div>
+    <div class="filter-grid">
+
+      <div class="filter-group">
+        <label class="filter-label" for="sel-country">Country</label>
+        <select id="sel-country">
+          <option value="">Loading countries…</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label" for="sel-year">Year</label>
+        <select id="sel-year" disabled>
+          <option value="">Select country first</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label" for="sel-metric">Show Data</label>
+        <select id="sel-metric">
+          <option value="all">All Metrics</option>
+          <option value="gdp_growth">GDP Growth Rate</option>
+          <option value="inflation">Inflation Rate</option>
+          <option value="unemployment">Unemployment Rate</option>
+          <option value="gdp_value">GDP Value</option>
+        </select>
+      </div>
+
+      <button class="fetch-btn" id="fetch-btn" onclick="fetchData()" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        Fetch Data
+      </button>
+    </div>
+    <div class="active-filters" id="active-filters"></div>
+  </div>
+
+  <div id="results-area">
+    <div class="empty-state">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <ellipse cx="12" cy="5" rx="9" ry="3"/>
+        <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
+        <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/>
+      </svg>
+      <p>Select a country and year above,<br>then click <strong style="color:var(--accent)">Fetch Data</strong> to load results from MySQL.</p>
+    </div>
+  </div>
+
+</main>
+
+<footer>G5 Nations · DBMS Mini Project · Post-COVID GDP Recovery Analysis</footer>
+
+<script>
+  const BASE = 'http://127.0.0.1:5000';
+
+  // Load countries on page load
+  window.addEventListener('DOMContentLoaded', async () => {
+    const sel = document.getElementById('sel-country');
+    try {
+      const res  = await fetch(`${BASE}/api/countries`);
+      const data = await res.json();
+      sel.innerHTML = '<option value="">— Select Country —</option>';
+      data.countries.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        sel.appendChild(o);
+      });
+    } catch {
+      sel.innerHTML = '<option value="">Cannot reach server</option>';
+    }
+  });
+
+  // Country change → load available years
+  document.getElementById('sel-country').addEventListener('change', async function () {
+    const yearSel = document.getElementById('sel-year');
+    const btn     = document.getElementById('fetch-btn');
+    yearSel.innerHTML = '<option value="">Loading years…</option>';
+    yearSel.disabled = true; btn.disabled = true;
+
+    if (!this.value) {
+      yearSel.innerHTML = '<option value="">Select country first</option>';
+      return;
+    }
+    try {
+      const res  = await fetch(`${BASE}/api/years?country=${encodeURIComponent(this.value)}`);
+      const data = await res.json();
+      yearSel.innerHTML = '<option value="">All Years</option>';
+      data.years.forEach(y => {
+        const o = document.createElement('option');
+        o.value = y; o.textContent = y;
+        yearSel.appendChild(o);
+      });
+      yearSel.disabled = false; btn.disabled = false;
+    } catch {
+      yearSel.innerHTML = '<option value="">Error loading years</option>';
+    }
+  });
+
+  // Main fetch
+  async function fetchData() {
+    const country = document.getElementById('sel-country').value;
+    const year    = document.getElementById('sel-year').value;
+    const metric  = document.getElementById('sel-metric').value;
+    if (!country) return;
+
+    // Pills
+    const pills = document.getElementById('active-filters');
+    pills.innerHTML = '';
+    [
+      `Country: ${country}`,
+      year ? `Year: ${year}` : 'All Years',
+      metric === 'all' ? 'All Metrics' : metric.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())
+    ].forEach(t => {
+      const p = document.createElement('span');
+      p.className = 'filter-pill'; p.textContent = t;
+      pills.appendChild(p);
+    });
+
+    const area = document.getElementById('results-area');
+    area.innerHTML = `<div class="loading-row"><span class="spinner"></span>Querying MySQL database…</div>`;
+
+    try {
+      const params = new URLSearchParams({ country });
+      if (year)            params.append('year', year);
+      if (metric !== 'all') params.append('metric', metric);
+
+      const res  = await fetch(`${BASE}/api/data?${params}`);
+      const data = await res.json();
+
+      if (data.error) {
+        area.innerHTML = errorBox(data.error); return;
+      }
+      renderResults(data, country, year, metric);
+    } catch {
+      area.innerHTML = errorBox('Cannot reach Flask server. Make sure <strong>app.py</strong> is running on port 5000.');
+    }
+  }
+
+  function errorBox(msg) {
+    return `<div class="error-box">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:2px">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg><span>${msg}</span></div>`;
+  }
+
+  function renderResults(data, country, year, metric) {
+    const area    = document.getElementById('results-area');
+    const showAll = metric === 'all';
+    let html = '';
+
+    // Stat cards — only when a specific year is selected
+    if (year) {
+      const gRow = data.gdp_growth?.[0]   || null;
+      const iRow = data.inflation?.[0]    || null;
+      const uRow = data.unemployment?.[0] || null;
+      const vRow = data.gdp_value?.[0]    || null;
+
+      const fmt  = (v, d=2) => v != null ? `${parseFloat(v).toFixed(d)}%` : null;
+      const fmtV = v => v != null ? `$${parseFloat(v).toLocaleString('en-US',{maximumFractionDigits:2})}B` : null;
+
+      const cards = [];
+      if (showAll || metric === 'gdp_growth')
+        cards.push({ cls:'gdp',  label:'GDP Growth Rate',   val: fmt(gRow?.gdp_growth_rate),   unit:'% annual growth' });
+      if (showAll || metric === 'inflation')
+        cards.push({ cls:'inf',  label:'Inflation Rate',    val: fmt(iRow?.inflation_rate),     unit:'% consumer prices' });
+      if (showAll || metric === 'unemployment')
+        cards.push({ cls:'unemp',label:'Unemployment Rate', val: fmt(uRow?.unemployment_rate),  unit:'% of labour force' });
+      if (showAll || metric === 'gdp_value')
+        cards.push({ cls:'val',  label:'GDP Value',         val: fmtV(vRow?.gdp_value),         unit:'USD Billions' });
+
+      if (cards.length) {
+        html += `<div class="stat-row">` +
+          cards.map((c, i) => `
+            <div class="stat-card ${c.cls}" style="animation-delay:${i*.07}s">
+              <div class="stat-label">${c.label}</div>
+              <div class="stat-value">${c.val ?? '<span class="stat-na">N/A</span>'}</div>
+              <div class="stat-unit">${c.unit}</div>
+            </div>`).join('') +
+        `</div>`;
+      }
+    }
+
+    // Tables
+    const sections = [
+      { key:'gdp_growth',   dot:'dot-gdp',   thCls:'gdp-col',   label:'GDP Growth Rate',   cols:['country_name','year','gdp_growth_rate'],   headers:['Country','Year','GDP Growth Rate (%)'],    metric:'gdp_growth' },
+      { key:'inflation',    dot:'dot-inf',   thCls:'inf-col',   label:'Inflation Rate',    cols:['country_name','year','inflation_rate'],    headers:['Country','Year','Inflation Rate (%)'],     metric:'inflation' },
+      { key:'unemployment', dot:'dot-unemp', thCls:'unemp-col', label:'Unemployment Rate', cols:['country_name','year','unemployment_rate'], headers:['Country','Year','Unemployment Rate (%)'],  metric:'unemployment' },
+      { key:'gdp_value',    dot:'dot-val',   thCls:'val-col',   label:'GDP Value',         cols:['country_name','year','gdp_value'],         headers:['Country','Year','GDP Value (USD Billions)'],metric:'gdp_value' },
+    ].filter(s => showAll || s.metric === metric);
+
+    sections.forEach((s, si) => {
+      const rows = data[s.key] || [];
+      const tbody = rows.length
+        ? rows.map(r => `<tr>${s.cols.map((c, ci) =>
+            `<td${ci===1?' class="year-col"':''}>${r[c] ?? '—'}</td>`
+          ).join('')}</tr>`).join('')
+        : `<tr class="no-data-row"><td colspan="${s.cols.length}">No data found for this selection.</td></tr>`;
+
+      html += `
+        <div class="table-section" style="animation:fadeUp .35s ease both ${si*.08}s">
+          <div class="table-header">
+            <div class="table-title"><span class="dot ${s.dot}"></span>${s.label}</div>
+            <span class="row-badge">${rows.length} row${rows.length!==1?'s':''}</span>
+          </div>
+          <div class="table-wrap">
+            <div class="table-scroll">
+              <table>
+                <thead><tr>${s.headers.map((h,hi)=>`<th class="${hi<2?'base-col':s.thCls}">${h}</th>`).join('')}</tr></thead>
+                <tbody>${tbody}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>`;
+    });
+
+    area.innerHTML = html || `<div class="empty-state"><p>No data returned for this selection.</p></div>`;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !document.getElementById('fetch-btn').disabled) fetchData();
+  });
+</script>
+
+</body>
+</html>

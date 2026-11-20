@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SQL Insights – Post-COVID GDP Recovery</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:       #0b0f1a;
+      --surface:  #111827;
+      --surface2: #0d1520;
+      --border:   #1e2d40;
+      --accent1:  #00c9a7;
+      --accent2:  #3b82f6;
+      --accent3:  #f59e0b;
+      --danger:   #f87171;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --tag-bg:   #1a2535;
+      --radius:   10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, #0d1b2a 0%, #0b0f1a 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 40px 36px;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 320px; height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,201,167,.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .badge {
+      display: inline-block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent1);
+      background: rgba(0,201,167,.1);
+      border: 1px solid rgba(0,201,167,.3);
+      border-radius: 4px;
+      padding: 4px 10px;
+      margin-bottom: 14px;
+    }
+    header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.15;
+      background: linear-gradient(90deg, #e2e8f0 30%, var(--accent1) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p { margin-top: 10px; color: var(--muted); font-size: 0.95rem; max-width: 580px; }
+    .meta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .meta-pill {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--tag-bg);
+    }
+    .meta-pill span { color: var(--accent3); }
+
+    /* ── HINT BAR ── */
+    .hint-bar { max-width: 980px; margin: 28px auto 0; padding: 0 24px; }
+    .hint-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(59,130,246,.08);
+      border: 1px solid rgba(59,130,246,.2);
+      border-radius: 8px;
+      padding: 11px 16px;
+      font-size: 0.82rem;
+      color: #93c5fd;
+    }
+
+    /* ── MAIN ── */
+    main { max-width: 980px; margin: 0 auto; padding: 32px 24px 0; }
+
+    .section-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── QUERY CARD ── */
+    .query-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      overflow: hidden;
+      transition: border-color .25s, box-shadow .25s;
+      animation: fadeUp .4s ease both;
+    }
+    .query-card:hover {
+      border-color: rgba(59,130,246,.4);
+      box-shadow: 0 0 0 1px rgba(59,130,246,.12), 0 8px 32px rgba(0,0,0,.4);
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .query-card:nth-child(1)  { animation-delay:.05s }
+    .query-card:nth-child(2)  { animation-delay:.10s }
+    .query-card:nth-child(3)  { animation-delay:.15s }
+    .query-card:nth-child(4)  { animation-delay:.20s }
+    .query-card:nth-child(5)  { animation-delay:.25s }
+    .query-card:nth-child(6)  { animation-delay:.30s }
+    .query-card:nth-child(7)  { animation-delay:.35s }
+    .query-card:nth-child(8)  { animation-delay:.40s }
+    .query-card:nth-child(9)  { animation-delay:.45s }
+    .query-card:nth-child(10) { animation-delay:.50s }
+
+    /* card header */
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: #0d1520;
+    }
+    .card-header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .q-number {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent1);
+      background: rgba(0,201,167,.1);
+      border: 1px solid rgba(0,201,167,.25);
+      border-radius: 4px;
+      padding: 3px 8px;
+      min-width: 34px;
+      text-align: center;
+    }
+
+    /* CLICKABLE TITLE */
+    .card-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color .2s;
+      user-select: none;
+      background: none;
+      border: none;
+      font-family: 'Syne', sans-serif;
+      text-align: left;
+      padding: 0;
+    }
+    .card-title:hover { color: var(--accent1); }
+    .run-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: rgba(0,201,167,.12);
+      border: 1px solid rgba(0,201,167,.28);
+      transition: background .2s, border-color .2s, transform .15s;
+      flex-shrink: 0;
+    }
+    .card-title:hover .run-icon { background: rgba(0,201,167,.28); border-color: var(--accent1); transform: scale(1.1); }
+    .run-icon svg { width:9px; height:9px; fill: var(--accent1); }
+
+    /* category tags */
+    .category-tag {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      padding: 3px 9px;
+      border-radius: 4px;
+      letter-spacing: .5px;
+    }
+    .tag-gdp   { background:rgba(59,130,246,.15);  color:#93c5fd; border:1px solid rgba(59,130,246,.3); }
+    .tag-inf   { background:rgba(245,158,11,.15);  color:#fcd34d; border:1px solid rgba(245,158,11,.3); }
+    .tag-unemp { background:rgba(168,85,247,.15);  color:#d8b4fe; border:1px solid rgba(168,85,247,.3); }
+    .tag-val   { background:rgba(0,201,167,.15);   color:#6ee7b7; border:1px solid rgba(0,201,167,.3); }
+
+    /* copy button */
+    .copy-btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { background: var(--tag-bg); color: var(--text); border-color: var(--accent2); }
+    .copy-btn.copied { color: var(--accent1); border-color: var(--accent1); }
+
+    /* description */
+    .card-desc { padding: 12px 18px 0; font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+    /* SQL block */
+    .code-wrap { padding: 14px 18px 18px; }
+    pre {
+      background: #080d15;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow-x: auto;
+      padding: 16px 18px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+    }
+    .kw    { color:#60a5fa; font-weight:600; }
+    .tbl   { color:#f9a8d4; }
+    .col   { color:#86efac; }
+    .alias { color:#fde68a; }
+    .num   { color:#fb923c; }
+    .punc  { color:#94a3b8; }
+
+    /* ── RESULTS PANEL ── */
+    .results-panel {
+      margin: 0 18px 18px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: none;
+    }
+    .results-panel.visible {
+      display: block;
+      animation: slideDown .28s ease;
+    }
+    @keyframes slideDown {
+      from { opacity:0; transform:translateY(-6px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .results-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 14px;
+      background: #080d15;
+      border-bottom: 1px solid var(--border);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .row-count { color: var(--accent1); }
+
+    /* spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(0,201,167,.2);
+      border-top-color: var(--accent1);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* loading state */
+    .loading-state {
+      padding: 18px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* error */
+    .error-box {
+      padding: 14px 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--danger);
+      background: rgba(248,113,113,.07);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.6;
+    }
+
+    /* table */
+    .table-scroll { overflow-x: auto; max-height: 340px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    thead tr { background: #0d1827; position: sticky; top: 0; z-index: 1; }
+    thead th {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent2);
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid rgba(30,45,64,.6); transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(59,130,246,.06); }
+    tbody td {
+      padding: 9px 14px;
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    tbody td:first-child { color: var(--accent1); font-weight: 600; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">DBMS Mini Project</div>
+  <h1>Post-COVID GDP<br>Recovery Analysis</h1>
+  <p>SQL query insights across G5 nations — GDP growth, inflation, unemployment &amp; absolute GDP values.</p>
+  <div class="meta-row">
+    <div class="meta-pill">Tables: <span>g5_countries, gdp_growth, inflation, unemployment, gdp_value</span></div>
+    <div class="meta-pill">Queries: <span>09</span></div>
+    <div class="meta-pill">Period: <span>2018 – 2024</span></div>
+  </div>
+</header>
+
+<div class="hint-bar">
+  <div class="hint-inner">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    Click any query title ▶ to run it live and see results. Click again to collapse.
+  </div>
+</div>
+
+<main>
+
+  <!-- ════════ GDP GROWTH ════════ -->
+  <div class="section-label">GDP Growth Rate Queries</div>
+
+  <!-- Q1 -->
+  <div class="query-card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <span class="q-number">Q1</span>
+        <button class="card-title" onclick="runQuery('q1', this)">
+          <span class="run-icon"><svg viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9"/></svg></span>
+          All Countries – GDP Growth Rate by Year
+        </button>
+        <span class="category-tag tag-gdp">GDP Growth</span>
+      </div>
+      <button class="copy-btn" onclick="copyQuery(this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="card-desc">Retrieves GDP growth rates for all G5 countries across all available years, ordered by country and year.</div>
+    <div class="code-wrap">
+      <pre><span class="kw">SELECT</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">g</span><span class="punc">.</span><span class="col">year</span><span class="punc">,</span> <span class="alias">g</span><span class="punc">.</span><span class="col">gdp_growth_rate</span>
+<span class="kw">FROM</span>   <span class="tbl">gdp_growth</span> <span class="alias">g</span>
+<span class="kw">JOIN</span>   <span class="tbl">g5_countries</span> <span class="alias">c</span> <span class="kw">ON</span> <span class="alias">g</span><span class="punc">.</span><span class="col">country_name</span> <span class="punc">=</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span>
+<span class="kw">ORDER BY</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">g</span><span class="punc">.</span><span class="col">year</span><span class="punc">;</span></pre>
+    </div>
+    <div class="results-panel" id="results-q1"></div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="query-card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <span class="q-number">Q2</span>
+        <button class="card-title" onclick="runQuery('q2', this)">
+          <span class="run-icon"><svg viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9"/></svg></span>
+          COVID Impact Year (2020) – Worst Performers First
+        </button>
+        <span class="category-tag tag-gdp">GDP Growth</span>
+      </div>
+      <button class="copy-btn" onclick="copyQuery(this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="card-desc">Shows GDP growth rates for 2020 (COVID shock year) sorted ascending — the most severely impacted country appears first.</div>
+    <div class="code-wrap">
+      <pre><span class="kw">SELECT</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">g</span><span class="punc">.</span><span class="col">gdp_growth_rate</span>
+<span class="kw">FROM</span>   <span class="tbl">gdp_growth</span> <span class="alias">g</span>
+<span class="kw">JOIN</span>   <span class="tbl">g5_countries</span> <span class="alias">c</span> <span class="kw">ON</span> <span class="alias">g</span><span class="punc">.</span><span class="col">country_name</span> <span class="punc">=</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span>
+<span class="kw">WHERE</span>  <span class="alias">g</span><span class="punc">.</span><span class="col">year</span> <span class="punc">=</span> <span class="num">2020</span>
+<span class="kw">ORDER BY</span> <span class="alias">g</span><span class="punc">.</span><span class="col">gdp_growth_rate</span> <span class="kw">ASC</span><span class="punc">;</span></pre>
+    </div>
+    <div class="results-panel" id="results-q2"></div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="query-card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <span class="q-number">Q3</span>
+        <button class="card-title" onclick="runQuery('q3', this)">
+          <span class="run-icon"><svg viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9"/></svg></span>
+          Recovery Year (2021) – Best Rebound First
+        </button>
+        <span class="category-tag tag-gdp">GDP Growth</span>
+      </div>
+      <button class="copy-btn" onclick="copyQuery(this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="card-desc">Shows 2021 GDP growth rates in descending order to highlight which G5 economy rebounded the strongest post-lockdown.</div>
+    <div class="code-wrap">
+      <pre><span class="kw">SELECT</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">g</span><span class="punc">.</span><span class="col">gdp_growth_rate</span>
+<span class="kw">FROM</span>   <span class="tbl">gdp_growth</span> <span class="alias">g</span>
+<span class="kw">JOIN</span>   <span class="tbl">g5_countries</span> <span class="alias">c</span> <span class="kw">ON</span> <span class="alias">g</span><span class="punc">.</span><span class="col">country_name</span> <span class="punc">=</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span>
+<span class="kw">WHERE</span>  <span class="alias">g</span><span class="punc">.</span><span class="col">year</span> <span class="punc">=</span> <span class="num">2021</span>
+<span class="kw">ORDER BY</span> <span class="alias">g</span><span class="punc">.</span><span class="col">gdp_growth_rate</span> <span class="kw">DESC</span><span class="punc">;</span></pre>
+    </div>
+    <div class="results-panel" id="results-q3"></div>
+  </div>
+
+  <!-- ════════ INFLATION ════════ -->
+  <div class="section-label" style="margin-top:36px;">Inflation Rate Queries</div>
+
+  <!-- Q4 -->
+  <div class="query-card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <span class="q-number">Q4</span>
+        <button class="card-title" onclick="runQuery('q4', this)">
+          <span class="run-icon"><svg viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9"/></svg></span>
+          All Countries – Inflation Rate by Year
+        </button>
+        <span class="category-tag tag-inf">Inflation</span>
+      </div>
+      <button class="copy-btn" onclick="copyQuery(this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="card-desc">Retrieves complete inflation history for all G5 countries, ordered by country name and year.</div>
+    <div class="code-wrap">
+      <pre><span class="kw">SELECT</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">i</span><span class="punc">.</span><span class="col">year</span><span class="punc">,</span> <span class="alias">i</span><span class="punc">.</span><span class="col">inflation_rate</span>
+<span class="kw">FROM</span>   <span class="tbl">inflation</span> <span class="alias">i</span>
+<span class="kw">JOIN</span>   <span class="tbl">g5_countries</span> <span class="alias">c</span> <span class="kw">ON</span> <span class="alias">i</span><span class="punc">.</span><span class="col">country_name</span> <span class="punc">=</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span>
+<span class="kw">ORDER BY</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">i</span><span class="punc">.</span><span class="col">year</span><span class="punc">;</span></pre>
+    </div>
+    <div class="results-panel" id="results-q4"></div>
+  </div>
+
+  <!-- Q5 -->
+  <div class="query-card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <span class="q-number">Q5</span>
+        <button class="card-title" onclick="runQuery('q5', this)">
+          <span class="run-icon"><svg viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9"/></svg></span>
+          Post-Surge Year (2022) – Highest Inflation First
+        </button>
+        <span class="category-tag tag-inf">Inflation</span>
+      </div>
+      <button class="copy-btn" onclick="copyQuery(this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="card-desc">Ranks G5 countries by inflation rate in 2022 from highest to lowest.</div>
+    <div class="code-wrap">
+      <pre><span class="kw">SELECT</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">i</span><span class="punc">.</span><span class="col">inflation_rate</span>
+<span class="kw">FROM</span>   <span class="tbl">inflation</span> <span class="alias">i</span>
+<span class="kw">JOIN</span>   <span class="tbl">g5_countries</span> <span class="alias">c</span> <span class="kw">ON</span> <span class="alias">i</span><span class="punc">.</span><span class="col">country_name</span> <span class="punc">=</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span>
+<span class="kw">WHERE</span>  <span class="alias">i</span><span class="punc">.</span><span class="col">year</span> <span class="punc">=</span> <span class="num">2022</span>
+<span class="kw">ORDER BY</span> <span class="alias">i</span><span class="punc">.</span><span class="col">inflation_rate</span> <span class="kw">DESC</span><span class="punc">;</span></pre>
+    </div>
+    <div class="results-panel" id="results-q5"></div>
+  </div>
+
+  <!-- ════════ UNEMPLOYMENT ════════ -->
+  <div class="section-label" style="margin-top:36px;">Unemployment Rate Queries</div>
+
+  <!-- Q6 -->
+  <div class="query-card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <span class="q-number">Q6</span>
+        <button class="card-title" onclick="runQuery('q6', this)">
+          <span class="run-icon"><svg viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9"/></svg></span>
+          All Countries – Unemployment Rate by Year
+        </button>
+        <span class="category-tag tag-unemp">Unemployment</span>
+      </div>
+      <button class="copy-btn" onclick="copyQuery(this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="card-desc">Retrieves the full unemployment timeline for all G5 countries, grouped by country and sorted chronologically.</div>
+    <div class="code-wrap">
+      <pre><span class="kw">SELECT</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">u</span><span class="punc">.</span><span class="col">year</span><span class="punc">,</span> <span class="alias">u</span><span class="punc">.</span><span class="col">unemployment_rate</span>
+<span class="kw">FROM</span>   <span class="tbl">unemployment</span> <span class="alias">u</span>
+<span class="kw">JOIN</span>   <span class="tbl">g5_countries</span> <span class="alias">c</span> <span class="kw">ON</span> <span class="alias">u</span><span class="punc">.</span><span class="col">country_name</span> <span class="punc">=</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span>
+<span class="kw">ORDER BY</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">u</span><span class="punc">.</span><span class="col">year</span><span class="punc">;</span></pre>
+    </div>
+    <div class="results-panel" id="results-q6"></div>
+  </div>
+
+  <!-- Q7 -->
+  <div class="query-card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <span class="q-number">Q7</span>
+        <button class="card-title" onclick="runQuery('q7', this)">
+          <span class="run-icon"><svg viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9"/></svg></span>
+          Latest Year (2024) – Lowest Unemployment First
+        </button>
+        <span class="category-tag tag-unemp">Unemployment</span>
+      </div>
+      <button class="copy-btn" onclick="copyQuery(this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="card-desc">Ranks G5 countries by unemployment rate in 2024 — lowest unemployment appears first.</div>
+    <div class="code-wrap">
+      <pre><span class="kw">SELECT</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">u</span><span class="punc">.</span><span class="col">unemployment_rate</span>
+<span class="kw">FROM</span>   <span class="tbl">unemployment</span> <span class="alias">u</span>
+<span class="kw">JOIN</span>   <span class="tbl">g5_countries</span> <span class="alias">c</span> <span class="kw">ON</span> <span class="alias">u</span><span class="punc">.</span><span class="col">country_name</span> <span class="punc">=</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span>
+<span class="kw">WHERE</span>  <span class="alias">u</span><span class="punc">.</span><span class="col">year</span> <span class="punc">=</span> <span class="num">2024</span>
+<span class="kw">ORDER BY</span> <span class="alias">u</span><span class="punc">.</span><span class="col">unemployment_rate</span> <span class="kw">ASC</span><span class="punc">;</span></pre>
+    </div>
+    <div class="results-panel" id="results-q7"></div>
+  </div>
+
+  <!-- ════════ GDP VALUE ════════ -->
+  <div class="section-label" style="margin-top:36px;">Absolute GDP Value Queries</div>
+
+  <!-- Q8 -->
+  <div class="query-card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <span class="q-number">Q8</span>
+        <button class="card-title" onclick="runQuery('q8', this)">
+          <span class="run-icon"><svg viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9"/></svg></span>
+          All Countries – GDP Value by Year (Full History)
+        </button>
+        <span class="category-tag tag-val">GDP Value</span>
+      </div>
+      <button class="copy-btn" onclick="copyQuery(this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="card-desc">Returns the complete absolute GDP value dataset for all G5 nations across all recorded years.</div>
+    <div class="code-wrap">
+      <pre><span class="kw">SELECT</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">v</span><span class="punc">.</span><span class="col">year</span><span class="punc">,</span> <span class="alias">v</span><span class="punc">.</span><span class="col">gdp_value</span>
+<span class="kw">FROM</span>   <span class="tbl">gdp_value</span> <span class="alias">v</span>
+<span class="kw">JOIN</span>   <span class="tbl">g5_countries</span> <span class="alias">c</span> <span class="kw">ON</span> <span class="alias">v</span><span class="punc">.</span><span class="col">country_name</span> <span class="punc">=</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span>
+<span class="kw">ORDER BY</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">v</span><span class="punc">.</span><span class="col">year</span><span class="punc">;</span></pre>
+    </div>
+    <div class="results-panel" id="results-q8"></div>
+  </div>
+
+  <!-- Q10 -->
+  <div class="query-card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <span class="q-number">Q10</span>
+        <button class="card-title" onclick="runQuery('q10', this)">
+          <span class="run-icon"><svg viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9"/></svg></span>
+          Latest Year (2024) – Largest Economy First
+        </button>
+        <span class="category-tag tag-val">GDP Value</span>
+      </div>
+      <button class="copy-btn" onclick="copyQuery(this)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+    <div class="card-desc">Ranks G5 economies by absolute GDP value in 2024 from the largest to the smallest.</div>
+    <div class="code-wrap">
+      <pre><span class="kw">SELECT</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span><span class="punc">,</span> <span class="alias">v</span><span class="punc">.</span><span class="col">gdp_value</span>
+<span class="kw">FROM</span>   <span class="tbl">gdp_value</span> <span class="alias">v</span>
+<span class="kw">JOIN</span>   <span class="tbl">g5_countries</span> <span class="alias">c</span> <span class="kw">ON</span> <span class="alias">v</span><span class="punc">.</span><span class="col">country_name</span> <span class="punc">=</span> <span class="alias">c</span><span class="punc">.</span><span class="col">country_name</span>
+<span class="kw">WHERE</span>  <span class="alias">v</span><span class="punc">.</span><span class="col">year</span> <span class="punc">=</span> <span class="num">2024</span>
+<span class="kw">ORDER BY</span> <span class="alias">v</span><span class="punc">.</span><span class="col">gdp_value</span> <span class="kw">DESC</span><span class="punc">;</span></pre>
+    </div>
+    <div class="results-panel" id="results-q10"></div>
+  </div>
+
+</main>
+
+<footer>G5 Nations · DBMS Mini Project · Post-COVID GDP Recovery Analysis</footer>
+
+<script>
+  const openPanels = new Set();
+
+  async function runQuery(queryId, btn) {
+    const panel = document.getElementById('results-' + queryId);
+
+    // Toggle off if already open
+    if (openPanels.has(queryId)) {
+      panel.classList.remove('visible');
+      openPanels.delete(queryId);
+      return;
+    }
+
+    openPanels.add(queryId);
+    panel.classList.add('visible');
+
+    // Show spinner
+    panel.innerHTML = `
+      <div class="loading-state">
+        <span class="spinner"></span>
+        Running query against MySQL…
+      </div>`;
+
+    try {
+      const res  = await fetch('http://127.0.0.1:5000/run_query/' + queryId);
+      const data = await res.json();
+
+      if (data.error) {
+        panel.innerHTML = `
+          <div class="error-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:2px">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>${data.error}</span>
+          </div>`;
+        return;
+      }
+
+      const { columns, rows } = data;
+
+      const thead = '<tr>' + columns.map(c => `<th>${c}</th>`).join('') + '</tr>';
+      const tbody = rows.map(row =>
+        '<tr>' + columns.map(c => `<td>${row[c] ?? ''}</td>`).join('') + '</tr>'
+      ).join('');
+
+      panel.innerHTML = `
+        <div class="results-toolbar">
+          <span>Query Result</span>
+          <span class="row-count">${rows.length} row${rows.length !== 1 ? 's' : ''} returned</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>${thead}</thead>
+            <tbody>${tbody}</tbody>
+          </table>
+        </div>`;
+
+    } catch (err) {
+      panel.innerHTML = `
+        <div class="error-box">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:2px">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>Cannot reach Flask server at port 5000. Make sure <strong>app.py</strong> is running (<code>python app.py</code>).</span>
+        </div>`;
+    }
+  }
+
+  function copyQuery(btn) {
+    const pre = btn.closest('.query-card').querySelector('pre');
+    navigator.clipboard.writeText(pre.innerText).then(() => {
+      btn.classList.add('copied');
+      btn.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg> Copied!`;
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = `
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg> Copy`;
+      }, 2000);
+    });
+  }
+</script>
+
+</body>
+</html>

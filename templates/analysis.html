@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recovery Analysis – Post-COVID GDP Recovery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:         #07090f;
+      --bg2:        #0d1320;
+      --surface:    #0e1420;
+      --border:     #1c2b3a;
+      --border2:    #243447;
+      --ink:        #111c2e;
+      --ink2:       #162030;
+      --muted:      #5a7080;
+      --muted2:     #8aa0b0;
+      --gold:       #d4a017;
+      --gold2:      #f0bc30;
+      --red:        #f87171;
+      --green:      #4ade80;
+      --blue:       #60a5fa;
+      --text:       #dde6f0;
+      --radius:     6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--ink);
+      color: var(--text);
+      padding: 0 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header-top {
+      border-bottom: 1px solid rgba(245,240,232,.12);
+      padding: 14px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(245,240,232,.45);
+    }
+    .header-main { padding: 36px 0 40px; }
+    .edition-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold2);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .edition-label::before, .edition-label::after {
+      content: '';
+      height: 1px;
+      background: rgba(212,160,23,.35);
+      flex: 1;
+    }
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.05;
+      color: var(--text);
+      letter-spacing: -.5px;
+    }
+    header h1 em {
+      font-style: italic;
+      color: var(--gold2);
+    }
+    header p {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: rgba(245,240,232,.6);
+      max-width: 540px;
+      line-height: 1.65;
+      font-weight: 300;
+    }
+    .header-rule {
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold) 0%, var(--gold2) 40%, transparent 100%);
+      margin-top: 28px;
+    }
+    .breadcrumb {
+      padding: 12px 0 0;
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(245,240,232,.35);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .breadcrumb a { color: rgba(245,240,232,.5); text-decoration: none; transition: color .2s; }
+    .breadcrumb a:hover { color: var(--gold2); }
+    .breadcrumb span { color: var(--gold2); }
+
+    /* ── MAIN ── */
+    main { max-width: 980px; margin: 0 auto; padding: 40px 24px 0; }
+
+    /* ── FORMULA BOX ── */
+    .formula-section {
+      background: var(--surface);
+      border: 2px solid var(--gold);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 36px;
+      position: relative;
+      animation: fadeUp .5s ease both;
+      box-shadow: 4px 4px 0 rgba(212,160,23,.12), 0 2px 20px rgba(0,0,0,.4);
+    }
+    .formula-section::before {
+      content: 'FORMULA';
+      position: absolute;
+      top: -11px; left: 20px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--gold);
+      background: var(--surface);
+      padding: 0 10px;
+    }
+    .formula-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--muted2);
+      margin-bottom: 18px;
+    }
+
+    /* the formula display */
+    .formula-display {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 24px;
+      background: var(--ink);
+      border-radius: 4px;
+      border-left: 4px solid var(--gold);
+      margin-bottom: 18px;
+    }
+    .formula-result {
+      font-family: 'Courier Prime', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gold2);
+      white-space: nowrap;
+    }
+    .formula-eq {
+      font-family: 'Courier Prime', monospace;
+      font-size: 1.1rem;
+      color: rgba(245,240,232,.5);
+    }
+    .formula-term {
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.9rem;
+      padding: 5px 12px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+    .term-positive { background: rgba(26,107,58,.25); color: #4ade80; border: 1px solid rgba(74,222,128,.2); }
+    .term-negative { background: rgba(192,57,43,.2); color: #f87171; border: 1px solid rgba(248,113,113,.2); }
+    .formula-op {
+      font-family: 'Courier Prime', monospace;
+      font-size: 1.2rem;
+      color: rgba(245,240,232,.4);
+    }
+
+    /* legend */
+    .formula-legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 10px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.82rem;
+      color: var(--muted2);
+      line-height: 1.5;
+    }
+    .legend-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+    .legend-dot.pos { background: var(--green); }
+    .legend-dot.neg { background: var(--red); }
+    .legend-item strong { color: var(--muted2); }
+
+    /* ── SELECTOR PANEL ── */
+    .selector-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 36px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.4);
+      animation: fadeUp .5s ease both .1s;
+      position: relative;
+    }
+    .selector-panel::before {
+      content: 'QUERY PARAMETERS';
+      position: absolute;
+      top: -10px; left: 20px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      color: var(--muted);
+      background: var(--surface);
+      padding: 0 10px;
+    }
+
+    .selector-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 20px;
+      align-items: end;
+    }
+    @media (max-width: 620px) {
+      .selector-grid { grid-template-columns: 1fr 1fr; }
+      .selector-grid .run-btn { grid-column: 1 / -1; }
+    }
+    @media (max-width: 400px) { .selector-grid { grid-template-columns: 1fr; } }
+
+    .sel-group { display: flex; flex-direction: column; gap: 8px; }
+    .sel-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted);
+    }
+    select {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: 'Courier Prime', monospace;
+      font-size: 13px;
+      padding: 10px 14px;
+      cursor: pointer; outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a7080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(184,134,11,.12); }
+    select:disabled { opacity: .45; cursor: not-allowed; }
+
+    .run-btn {
+      background: var(--ink);
+      color: var(--gold2);
+      font-family: 'Courier Prime', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 11px 28px;
+      border: 2px solid var(--gold);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: background .2s, color .2s, box-shadow .2s, transform .15s;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+    .run-btn:hover { background: var(--gold); color: var(--text); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(184,134,11,.3); }
+    .run-btn:active { transform: translateY(0); }
+    .run-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* ── RESULTS ── */
+    #results-area { animation: fadeUp .4s ease both .15s; }
+
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      color: var(--muted); border: 1px dashed var(--border);
+      border-radius: var(--radius);
+    }
+    .empty-state svg { opacity: .3; margin-bottom: 16px; }
+    .empty-state p { font-family: 'Courier Prime', monospace; font-size: 12px; line-height: 2; }
+
+    /* loading */
+    .loading-state {
+      display: flex; align-items: center; gap: 12px;
+      padding: 28px 24px;
+      font-family: 'Courier Prime', monospace; font-size: 12px; color: var(--muted);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(184,134,11,.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .8s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* error */
+    .error-box {
+      padding: 16px 20px;
+      background: rgba(192,57,43,.06);
+      border: 1px solid rgba(192,57,43,.25);
+      border-left: 4px solid var(--red);
+      border-radius: var(--radius);
+      font-family: 'Courier Prime', monospace;
+      font-size: 12px; color: var(--red);
+      display: flex; gap: 10px; align-items: flex-start; line-height: 1.7;
+    }
+
+    /* ── SCORE CARD (single year) ── */
+    .score-hero {
+      background: var(--ink);
+      border-radius: var(--radius);
+      padding: 36px 40px;
+      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp .4s ease both;
+      box-shadow: 6px 6px 0 rgba(212,160,23,.15);
+      border: 1px solid rgba(212,160,23,.15);
+    }
+    .score-hero::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 260px; height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(212,160,23,.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .score-hero-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+      color: rgba(212,160,23,.6); margin-bottom: 10px;
+    }
+    .score-hero-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem; font-weight: 700;
+      color: var(--text); margin-bottom: 4px;
+    }
+    .score-hero-year {
+      font-family: 'Courier Prime', monospace;
+      font-size: 12px; color: rgba(245,240,232,.4); margin-bottom: 28px;
+    }
+    .score-big {
+      display: flex; align-items: baseline; gap: 8px;
+      margin-bottom: 6px;
+    }
+    .score-number {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(3rem, 8vw, 5rem);
+      font-weight: 900;
+      line-height: 1;
+      transition: color .3s;
+    }
+    .score-number.positive { color: #4ade80; }
+    .score-number.negative { color: #f87171; }
+    .score-number.neutral  { color: var(--gold2); }
+    .score-unit {
+      font-family: 'Courier Prime', monospace;
+      font-size: 14px; color: rgba(245,240,232,.4);
+    }
+    .score-verdict {
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+    .verdict-strong  { color: #4ade80; }
+    .verdict-moderate { color: var(--gold2); }
+    .verdict-weak    { color: #fbbf24; }
+    .verdict-poor    { color: #f87171; }
+
+    /* breakdown bars */
+    .breakdown { display: flex; flex-direction: column; gap: 12px; }
+    .breakdown-item { display: flex; flex-direction: column; gap: 5px; }
+    .breakdown-row {
+      display: flex; align-items: center; justify-content: space-between;
+      font-family: 'Courier Prime', monospace; font-size: 11px;
+    }
+    .breakdown-key { color: rgba(245,240,232,.5); letter-spacing: 1px; }
+    .breakdown-val { font-weight: 700; }
+    .breakdown-val.pos { color: #4ade80; }
+    .breakdown-val.neg { color: #f87171; }
+    .bar-track {
+      height: 4px; background: rgba(245,240,232,.08); border-radius: 2px; overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%; border-radius: 2px;
+      transition: width .8s cubic-bezier(.4,0,.2,1);
+    }
+    .bar-fill.pos { background: linear-gradient(90deg, #166534, #4ade80); }
+    .bar-fill.neg { background: linear-gradient(90deg, #991b1b, #f87171); }
+
+    /* divider in hero */
+    .hero-divider {
+      height: 1px; background: rgba(245,240,232,.1);
+      margin: 24px 0;
+    }
+
+    /* ── HISTORY TABLE (all years) ── */
+    .history-section { animation: fadeUp .4s ease both; }
+    .history-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .history-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem; font-weight: 700; color: var(--muted2);
+    }
+    .history-count {
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px; color: var(--muted);
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 3px 10px; border-radius: 3px;
+    }
+
+    .table-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,.4);
+    }
+    .table-scroll { overflow-x: auto; max-height: 440px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: var(--ink); position: sticky; top: 0; z-index: 1; }
+    thead th {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+      padding: 12px 18px; text-align: left;
+      border-bottom: 2px solid var(--gold);
+      white-space: nowrap; color: var(--gold2);
+    }
+    thead th.center { text-align: center; }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface); }
+    tbody td {
+      padding: 11px 18px;
+      font-family: 'Courier Prime', monospace; font-size: 12px;
+      color: var(--muted2); white-space: nowrap;
+    }
+    tbody td:first-child { font-weight: 700; color: var(--text); }
+    td.center { text-align: center; }
+    td.score-pos { color: var(--green); font-weight: 700; }
+    td.score-neg { color: var(--red);   font-weight: 700; }
+    td.score-neu { color: var(--gold);  font-weight: 700; }
+
+    /* score badge in table */
+    .score-badge {
+      display: inline-block;
+      padding: 2px 8px; border-radius: 3px;
+      font-size: 11px; font-weight: 700;
+    }
+    .badge-pos { background: rgba(26,107,58,.12); color: var(--green); border: 1px solid rgba(26,107,58,.25); }
+    .badge-neg { background: rgba(192,57,43,.1);  color: var(--red);   border: 1px solid rgba(192,57,43,.25); }
+    .badge-neu { background: rgba(184,134,11,.1); color: var(--gold);  border: 1px solid rgba(184,134,11,.25); }
+
+    /* verdict pills in table */
+    .verdict-pill {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 3px; white-space: nowrap;
+    }
+    .vp-strong   { background: rgba(26,107,58,.12);  color: var(--green); border: 1px solid rgba(26,107,58,.2); }
+    .vp-moderate { background: rgba(184,134,11,.12); color: var(--gold);  border: 1px solid rgba(184,134,11,.2); }
+    .vp-weak     { background: rgba(212,122,0,.12);  color: #d97706;       border: 1px solid rgba(217,119,6,.2); }
+    .vp-poor     { background: rgba(192,57,43,.1);   color: var(--red);    border: 1px solid rgba(192,57,43,.2); }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center; margin-top: 60px;
+      padding: 20px 0;
+      border-top: 1px solid var(--border);
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted);
+    }
+    footer span { color: var(--gold); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <span>G5 Nations · DBMS Mini Project</span>
+    <span>Post-COVID Economic Recovery</span>
+  </div>
+  <div class="header-main">
+    <div class="edition-label">Recovery Analysis</div>
+    <h1>The <em>Recovery</em><br>Score Report</h1>
+    <p>Quantifying economic resilience across G5 nations using GDP growth, inflation burden, and unemployment drag — fetched live from your MySQL database.</p>
+    <div class="breadcrumb">
+      <a href="/">Home</a>
+      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      <span>Recovery Analysis</span>
+    </div>
+  </div>
+  <div class="header-rule"></div>
+</header>
+
+<main>
+
+  <!-- ── FORMULA BOX ── -->
+  <div class="formula-section">
+    <div class="formula-title">Recovery Score Composition</div>
+
+    <div class="formula-display">
+      <span class="formula-result">Recovery Score</span>
+      <span class="formula-eq">&nbsp;=&nbsp;</span>
+      <span class="formula-term term-positive">(GDP Growth Rate × 0.5)</span>
+      <span class="formula-op">&nbsp;−&nbsp;</span>
+      <span class="formula-term term-negative">(Inflation Rate × 0.25)</span>
+      <span class="formula-op">&nbsp;−&nbsp;</span>
+      <span class="formula-term term-negative">(Unemployment Rate × 0.25)</span>
+    </div>
+
+    <div class="formula-legend">
+      <div class="legend-item">
+        <span class="legend-dot pos"></span>
+        <span><strong>GDP Growth Rate × 0.5</strong> — Primary driver; annual GDP growth rate weighted at 50%. Higher growth lifts the score.</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot neg"></span>
+        <span><strong>Inflation Rate × 0.25</strong> — Erodes purchasing power; higher inflation drags the score down (25% weight).</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot neg"></span>
+        <span><strong>Unemployment Rate × 0.25</strong> — Signals labour market weakness; higher unemployment lowers the score (25% weight).</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SELECTOR PANEL ── -->
+  <div class="selector-panel">
+    <div class="selector-grid">
+
+      <div class="sel-group">
+        <label class="sel-label" for="sel-country">Country</label>
+        <select id="sel-country">
+          <option value="">Loading countries…</option>
+        </select>
+      </div>
+
+      <div class="sel-group">
+        <label class="sel-label" for="sel-year">Year</label>
+        <select id="sel-year" disabled>
+          <option value="">Select country first</option>
+        </select>
+      </div>
+
+      <button class="run-btn" id="run-btn" onclick="fetchScore()" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        Analyse
+      </button>
+    </div>
+  </div>
+
+  <!-- ── RESULTS ── -->
+  <div id="results-area">
+    <div class="empty-state">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+      </svg>
+      <p>Select a country above and optionally a year,<br>then click <strong>Analyse</strong> to retrieve the recovery score.</p>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  G5 Nations &nbsp;·&nbsp; DBMS Mini Project &nbsp;·&nbsp;
+  <span>Post-COVID GDP Recovery Analysis</span>
+</footer>
+
+<script>
+  const BASE = 'http://127.0.0.1:5000';
+
+  // ── Boot: load countries ──────────────────────────────────
+  window.addEventListener('DOMContentLoaded', async () => {
+    const sel = document.getElementById('sel-country');
+    try {
+      const res  = await fetch(`${BASE}/api/countries`);
+      const data = await res.json();
+      sel.innerHTML = '<option value="">— Select Country —</option>';
+      data.countries.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        sel.appendChild(o);
+      });
+    } catch {
+      sel.innerHTML = '<option value="">Cannot reach server</option>';
+    }
+  });
+
+  // ── Country change → load years ──────────────────────────
+  document.getElementById('sel-country').addEventListener('change', async function () {
+    const yearSel = document.getElementById('sel-year');
+    const btn     = document.getElementById('run-btn');
+    yearSel.innerHTML = '<option value="">Loading…</option>';
+    yearSel.disabled = true; btn.disabled = true;
+    if (!this.value) {
+      yearSel.innerHTML = '<option value="">Select country first</option>';
+      return;
+    }
+    try {
+      const res  = await fetch(`${BASE}/api/recovery_years?country=${encodeURIComponent(this.value)}`);
+      const data = await res.json();
+      yearSel.innerHTML = '<option value="">All Years</option>';
+      data.years.forEach(y => {
+        const o = document.createElement('option');
+        o.value = y; o.textContent = y;
+        yearSel.appendChild(o);
+      });
+      yearSel.disabled = false; btn.disabled = false;
+    } catch {
+      yearSel.innerHTML = '<option value="">Error loading years</option>';
+    }
+  });
+
+  // ── Fetch & render ────────────────────────────────────────
+  async function fetchScore() {
+    const country = document.getElementById('sel-country').value;
+    const year    = document.getElementById('sel-year').value;
+    if (!country) return;
+
+    const area = document.getElementById('results-area');
+    area.innerHTML = `
+      <div class="loading-state">
+        <span class="spinner"></span>
+        Querying recovery scores from MySQL…
+      </div>`;
+
+    try {
+      const params = new URLSearchParams({ country });
+      if (year) params.append('year', year);
+      const res  = await fetch(`${BASE}/api/recovery_score?${params}`);
+      const data = await res.json();
+
+      if (data.error) { area.innerHTML = errBox(data.error); return; }
+
+      if (year && data.rows.length === 1) {
+        renderSingleScore(data.rows[0], area);
+      } else {
+        renderScoreHistory(data.rows, country, area);
+      }
+
+    } catch {
+      area.innerHTML = errBox('Cannot reach Flask server. Make sure <strong>app.py</strong> is running on port 5000.');
+    }
+  }
+
+  // ── Verdict helper ────────────────────────────────────────
+  function getVerdict(score) {
+    if (score >= 5)  return { label: 'Strong Recovery',    cls: 'strong',   pill: 'vp-strong' };
+    if (score >= 1)  return { label: 'Moderate Recovery',  cls: 'moderate', pill: 'vp-moderate' };
+    if (score >= -2) return { label: 'Weak Recovery',      cls: 'weak',     pill: 'vp-weak' };
+    return            { label: 'Poor / Contraction',       cls: 'poor',     pill: 'vp-poor' };
+  }
+
+  function scoreClass(v) {
+    return v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral';
+  }
+  function badgeCls(v) {
+    return v > 0 ? 'badge-pos' : v < 0 ? 'badge-neg' : 'badge-neu';
+  }
+  function fmt(v, d=2) {
+    if (v == null) return '—';
+    const n = parseFloat(v);
+    return (n >= 0 ? '+' : '') + n.toFixed(d);
+  }
+
+  // ── Single year hero card ─────────────────────────────────
+  function renderSingleScore(row, area) {
+    const score   = parseFloat(row.recovery_score);
+    const gdpGrow = parseFloat(row.gdp_growth   ?? 0);
+    const inf     = parseFloat(row.inflation_rate    ?? 0);
+    const unemp   = parseFloat(row.unemployment_rate ?? 0);
+    const verdict = getVerdict(score);
+
+    // weighted contributions for bar sizing
+    const wGdpGrow = gdpGrow * 0.5;
+    const wInf     = inf     * 0.25;
+    const wUnemp   = unemp   * 0.25;
+    const maxAbs   = Math.max(Math.abs(wGdpGrow), Math.abs(wInf), Math.abs(wUnemp), 1);
+    const barW     = v => Math.min(Math.abs(v) / maxAbs * 100, 100).toFixed(1);
+
+    area.innerHTML = `
+      <div class="score-hero">
+        <div class="score-hero-label">Recovery Score · ${row.year}</div>
+        <div class="score-hero-name">${row.country_name}</div>
+        <div class="score-hero-year">Fiscal Year ${row.year}</div>
+
+        <div class="score-big">
+          <div class="score-number ${scoreClass(score)}">${fmt(score)}</div>
+          <div class="score-unit">pts</div>
+        </div>
+        <div class="score-verdict verdict-${verdict.cls}">${verdict.label.toUpperCase()}</div>
+
+        <div class="hero-divider"></div>
+
+        <div class="breakdown">
+          <div class="breakdown-item">
+            <div class="breakdown-row">
+              <span class="breakdown-key">GDP GROWTH RATE × 0.5</span>
+              <span class="breakdown-val pos">${fmt(wGdpGrow)} <span style="opacity:.45;font-size:10px">(rate: ${fmt(gdpGrow)}%)</span></span>
+            </div>
+            <div class="bar-track"><div class="bar-fill pos" style="width:${barW(wGdpGrow)}%"></div></div>
+          </div>
+          <div class="breakdown-item">
+            <div class="breakdown-row">
+              <span class="breakdown-key">INFLATION RATE × 0.25</span>
+              <span class="breakdown-val neg">−${wInf.toFixed(2)} <span style="opacity:.45;font-size:10px">(rate: ${inf.toFixed(2)}%)</span></span>
+            </div>
+            <div class="bar-track"><div class="bar-fill neg" style="width:${barW(wInf)}%"></div></div>
+          </div>
+          <div class="breakdown-item">
+            <div class="breakdown-row">
+              <span class="breakdown-key">UNEMPLOYMENT RATE × 0.25</span>
+              <span class="breakdown-val neg">−${wUnemp.toFixed(2)} <span style="opacity:.45;font-size:10px">(rate: ${unemp.toFixed(2)}%)</span></span>
+            </div>
+            <div class="bar-track"><div class="bar-fill neg" style="width:${barW(wUnemp)}%"></div></div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── All-years history table ───────────────────────────────
+  function renderScoreHistory(rows, country, area) {
+    if (!rows.length) {
+      area.innerHTML = errBox(`No recovery score data found for ${country}.`);
+      return;
+    }
+
+    const tbody = rows.map(r => {
+      const score  = parseFloat(r.recovery_score);
+      const verdict = getVerdict(score);
+      const gdp    = r.gdp_growth   != null ? fmt(parseFloat(r.gdp_growth))          + '%' : '—';
+      const inf    = r.inflation_rate    != null ? parseFloat(r.inflation_rate).toFixed(2)    + '%' : '—';
+      const unemp  = r.unemployment_rate != null ? parseFloat(r.unemployment_rate).toFixed(2) + '%' : '—';
+
+      return `<tr>
+        <td>${r.year}</td>
+        <td>${r.country_name}</td>
+        <td style="color:${parseFloat(r.gdp_growth??0)>=0?'var(--green)':'var(--red)'}">${gdp}</td>
+        <td style="color:var(--red)">${inf}</td>
+        <td style="color:var(--red)">${unemp}</td>
+        <td class="center">
+          <span class="score-badge ${badgeCls(score)}">${fmt(score)}</span>
+        </td>
+        <td class="center">
+          <span class="verdict-pill ${verdict.pill}">${verdict.label}</span>
+        </td>
+      </tr>`;
+    }).join('');
+
+    area.innerHTML = `
+      <div class="history-section">
+        <div class="history-header">
+          <div class="history-title">Recovery Score History — ${country}</div>
+          <span class="history-count">${rows.length} year${rows.length!==1?'s':''}</span>
+        </div>
+        <div class="table-wrap">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Country</th>
+                  <th>GDP Growth Rate</th>
+                  <th>Inflation Rate</th>
+                  <th>Unemployment Rate</th>
+                  <th class="center">Recovery Score</th>
+                  <th class="center">Verdict</th>
+                </tr>
+              </thead>
+              <tbody>${tbody}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function errBox(msg) {
+    return `<div class="error-box">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:2px">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg><span>${msg}</span></div>`;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !document.getElementById('run-btn').disabled) fetchScore();
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Covid GDP Recovery Analysis</title>
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: -1;
+        }
+
+        body.index {
+            margin: 0;
+            font-family: 'Times New Roman', Times, serif;
+            background-image: url('/static/images/Copilot_20260517_113821.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #2c3e50;
+        }
+
+        /* HEADER BOX */
+        .header {
+            text-align: left;
+            padding: 60px;
+            background-color: rgba(161, 89, 22, 0.75);
+            max-width: 750px;
+            border-radius: 14px;
+            margin: 40px;
+            box-shadow: 0 6px 18px rgba(171,169,169,0.4);
+        }
+
+        .header h1 {
+            font-size: 38px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #f9a825;
+            line-height: 1.3;
+        }
+
+        .header p {
+            font-size: 19px;
+            line-height: 1.8;
+            color: #f5f5f5;
+            margin-bottom: 25px;
+        }
+
+        /* G5 COUNTRY LIST */
+        .countries-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 15px;
+            text-decoration: underline;
+        }
+
+        .country-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .country-card {
+            background: rgba(255,255,255,0.15);
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .country-card:hover {
+            background: #f9a825;
+            color: #000;
+            transform: translateY(-4px) scale(1.05);
+        }
+
+        /* NAVIGATION BAR */
+        .navbar {
+            display: flex;
+            justify-content: center;
+            gap: 22px;
+            margin: 30px auto;
+            flex-wrap: wrap;
+        }
+
+        .navbar a {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 12px 22px;
+            background: linear-gradient(135deg, rgba(26,35,126,0.9), rgba(245,124,0,0.9));
+            border-radius: 30px;
+            border: 2px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+        }
+
+        .navbar a:hover {
+            background: linear-gradient(135deg, #f9a825, #ff9800);
+            color: #000;
+            transform: scale(1.12);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+        }
+
+        /* DATA SOURCE NOTE */
+        .source-note {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 10px 40px 40px;
+            padding: 18px 28px;
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(249, 168, 37, 0.35);
+            border-left: 4px solid #f9a825;
+            border-radius: 10px;
+            max-width: 750px;
+            backdrop-filter: blur(6px);
+        }
+
+        .source-note-icon {
+            flex-shrink: 0;
+            width: 36px; height: 36px;
+            background: rgba(249,168,37,.15);
+            border: 1px solid rgba(249,168,37,.3);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .source-note-text {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 15px;
+            line-height: 1.65;
+            color: rgba(255,255,255,0.82);
+        }
+
+        .source-note-text strong {
+            color: #f9a825;
+            font-weight: bold;
+        }
+
+        .source-note-text a {
+            color: #f9a825;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            transition: opacity .2s;
+        }
+
+        .source-note-text a:hover { opacity: .75; }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .header {
+                margin: 20px;
+                padding: 35px;
+            }
+
+            .header h1 {
+                font-size: 28px;
+            }
+
+            .country-card {
+                font-size: 17px;
+                padding: 10px 14px;
+            }
+
+            .navbar a {
+                font-size: 16px;
+                padding: 10px 16px;
+            }
+
+            .source-note {
+                margin: 10px 20px 30px;
+                padding: 14px 18px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body class="index">
+
+    <!-- HEADER SECTION -->
+    <div class="header">
+        <h1>Post-Covid GDP Recovery Analysis of G5 Countries</h1>
+
+        <p>
+            This project explores the economic recovery trends of the G5 nations
+            after the Covid-19 pandemic, highlighting GDP growth patterns,
+            sectoral impacts, inflation, unemployment, and comparative analysis.
+        </p>
+
+        <!-- G5 COUNTRIES -->
+        <div class="countries-title">G5 Countries:</div>
+
+        <div class="country-list">
+            <div class="country-card">USA</div>
+            <div class="country-card">United Kingdom</div>
+            <div class="country-card">Germany</div>
+            <div class="country-card">France</div>
+            <div class="country-card">Japan</div>
+        </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <div class="navbar">
+        <a href="/">Home</a>
+        <a href="/data">Data Explorer</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/insights">Insights</a>
+        <a href="/analysis">Analysis</a>
+    </div>
+
+    <!-- DATA SOURCE NOTE -->
+    <div class="source-note">
+        <div class="source-note-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f9a825" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+        </div>
+        <div class="source-note-text">
+            <strong>Data Source:</strong> All the economic data presented across this project —
+            including GDP growth rates, inflation, unemployment, and GDP values for the G5 nations —
+            has been sourced from the
+            <strong><a href="https://data.worldbank.org" target="_blank" rel="noopener">World Bank Open Data</a></strong>.
+        </div>
+    </div>
+
+</body>
+</html>

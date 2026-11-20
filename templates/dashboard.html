@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard – Post-COVID GDP Recovery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:       #0a0a0a;
+      --bg2:      #111111;
+      --bg3:      #181818;
+      --border:   #252525;
+      --border2:  #303030;
+      --text:     #f0ece4;
+      --muted:    #666;
+      --muted2:   #999;
+
+      /* metric accent colours */
+      --c1: #e8ff47;   /* GDP growth  – electric lime */
+      --c2: #ff6b35;   /* inflation   – burnt orange  */
+      --c3: #00d4ff;   /* unemployment– cyan          */
+      --c4: #bf80ff;   /* GDP value   – violet        */
+      --c5: #ff3d6b;   /* recovery    – hot pink      */
+
+      /* country palette */
+      --p0: #e8ff47;
+      --p1: #ff6b35;
+      --p2: #00d4ff;
+      --p3: #bf80ff;
+      --p4: #ff3d6b;
+
+      --radius: 8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── HEADER ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg);
+    }
+    header::before {
+      content: 'DASHBOARD';
+      position: absolute;
+      right: -20px; top: 50%;
+      transform: translateY(-50%);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 140px;
+      color: rgba(255,255,255,.02);
+      letter-spacing: 8px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .logo-block { display: flex; align-items: baseline; gap: 12px; }
+    .logo-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.4rem;
+      letter-spacing: 3px;
+      color: var(--text);
+      line-height: 1;
+    }
+    .logo-title em { color: var(--c1); font-style: normal; }
+    .logo-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .nav-links {
+      display: flex; gap: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+    }
+    .nav-links a {
+      padding: 6px 14px; border-radius: 3px;
+      color: var(--muted2); text-decoration: none;
+      border: 1px solid transparent;
+      transition: all .2s;
+    }
+    .nav-links a:hover { color: var(--text); border-color: var(--border2); }
+    .nav-links a.active { color: var(--c1); border-color: rgba(232,255,71,.25); background: rgba(232,255,71,.05); }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: calc(100vh - 73px);
+    }
+
+    /* ── SIDEBAR ── */
+    aside {
+      border-right: 1px solid var(--border);
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      background: var(--bg2);
+      position: sticky;
+      top: 0;
+      height: calc(100vh - 73px);
+      overflow-y: auto;
+    }
+
+    .ctrl-section { display: flex; flex-direction: column; gap: 10px; }
+    .ctrl-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--muted);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* country chips */
+    .country-chips { display: flex; flex-direction: column; gap: 6px; }
+    .country-chip {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border2);
+      background: var(--bg3);
+      cursor: pointer;
+      transition: all .2s;
+      user-select: none;
+    }
+    .country-chip:hover { border-color: var(--border2); background: #1f1f1f; }
+    .country-chip.selected { border-color: var(--chip-color); background: color-mix(in srgb, var(--chip-color) 10%, transparent); }
+    .chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--chip-color); flex-shrink: 0; }
+    .chip-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .chip-check {
+      width: 16px; height: 16px; border-radius: 3px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .country-chip.selected .chip-check {
+      background: var(--chip-color);
+      border-color: var(--chip-color);
+    }
+    .chip-check svg { display: none; }
+    .country-chip.selected .chip-check svg { display: block; }
+
+    /* metric pills */
+    .metric-pills { display: flex; flex-direction: column; gap: 6px; }
+    .metric-pill {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border2);
+      background: var(--bg3);
+      cursor: pointer;
+      transition: all .2s;
+      user-select: none;
+    }
+    .metric-pill:hover { background: #1f1f1f; }
+    .metric-pill.active { border-color: var(--pill-color); background: color-mix(in srgb, var(--pill-color) 10%, transparent); }
+    .pill-bar { width: 3px; height: 18px; border-radius: 2px; background: var(--pill-color); flex-shrink: 0; }
+    .pill-name { font-size: 12px; font-weight: 500; flex: 1; }
+    .pill-key {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; color: var(--muted); letter-spacing: 1px;
+    }
+
+    /* chart type toggle */
+    .chart-type-row { display: flex; gap: 6px; }
+    .type-btn {
+      flex: 1; padding: 8px 4px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      background: var(--bg3);
+      color: var(--muted2);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all .2s;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .type-btn:hover { color: var(--text); }
+    .type-btn.active { border-color: var(--c1); color: var(--c1); background: rgba(232,255,71,.07); }
+
+    /* plot button */
+    .plot-btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--c1);
+      color: #000;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: 3px;
+      border: none; border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+    }
+    .plot-btn:hover { opacity: .88; transform: translateY(-1px); }
+    .plot-btn:active { transform: translateY(0); }
+    .plot-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+    /* sidebar status */
+    .sidebar-status {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; color: var(--muted);
+      line-height: 1.7;
+      padding: 10px 12px;
+      background: var(--bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+    .sidebar-status span { color: var(--c1); }
+
+    /* ── MAIN CANVAS AREA ── */
+    main {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      background: var(--bg);
+    }
+
+    /* top bar */
+    .main-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .chart-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem; letter-spacing: 2px;
+      color: var(--text);
+    }
+    .chart-heading em { color: var(--c1); font-style: normal; }
+    .mode-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+      padding: 5px 12px; border-radius: 3px;
+      background: rgba(232,255,71,.08);
+      border: 1px solid rgba(232,255,71,.2);
+      color: var(--c1);
+    }
+
+    /* empty state */
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; padding: 80px 20px;
+      text-align: center;
+      border: 1px dashed var(--border2);
+      border-radius: 12px;
+      min-height: 400px;
+    }
+    .empty-icon {
+      width: 64px; height: 64px; opacity: .15;
+    }
+    .empty-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem; letter-spacing: 2px;
+      color: var(--muted);
+    }
+    .empty-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; color: var(--muted);
+      line-height: 1.9; max-width: 320px;
+    }
+
+    /* ── CHART CARDS ── */
+    .charts-grid {
+      display: grid;
+      gap: 20px;
+    }
+    .charts-grid.single { grid-template-columns: 1fr; }
+    .charts-grid.double { grid-template-columns: 1fr 1fr; }
+    .charts-grid.triple { grid-template-columns: 1fr 1fr 1fr; }
+
+    .chart-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      animation: slideUp .4s ease both;
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .chart-card:nth-child(1) { animation-delay:.05s }
+    .chart-card:nth-child(2) { animation-delay:.12s }
+    .chart-card:nth-child(3) { animation-delay:.19s }
+    .chart-card:nth-child(4) { animation-delay:.26s }
+    .chart-card:nth-child(5) { animation-delay:.33s }
+
+    .chart-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+    }
+    .chart-card-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    }
+    .chart-card-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; color: var(--muted); letter-spacing: 1px;
+    }
+    .chart-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; padding: 3px 8px; border-radius: 3px;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    .chart-body { padding: 16px; position: relative; }
+    .chart-body canvas { width: 100% !important; }
+
+    /* comparative full-width card */
+    .chart-card.comparative { grid-column: 1 / -1; }
+    .chart-card.comparative .chart-body { padding: 20px; }
+
+    /* loading overlay */
+    .chart-loading {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px; padding: 60px;
+      font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted);
+    }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(232,255,71,.15);
+      border-top-color: var(--c1);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* error */
+    .chart-error {
+      padding: 24px 20px;
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      color: #f87171; line-height: 1.8;
+      background: rgba(248,113,113,.05);
+      border-left: 3px solid #f87171;
+    }
+
+    /* legend strip */
+    .legend-strip {
+      display: flex; flex-wrap: wrap; gap: 14px;
+      padding: 10px 18px;
+      border-top: 1px solid var(--border);
+      background: var(--bg3);
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 6px;
+      font-family: 'Space Mono', monospace; font-size: 9px;
+      color: var(--muted2); letter-spacing: 1px; text-transform: uppercase;
+    }
+    .legend-swatch { width: 20px; height: 3px; border-radius: 2px; }
+
+    /* stat chips below chart */
+    .stat-chips {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+    }
+    .stat-chip {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; padding: 4px 10px;
+      border-radius: 3px;
+      background: var(--bg); border: 1px solid var(--border2);
+      color: var(--muted2);
+    }
+    .stat-chip strong { color: var(--text); }
+
+    /* responsive */
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { position: static; height: auto; }
+      .charts-grid.double,
+      .charts-grid.triple { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      header { padding: 0 16px; }
+      main { padding: 16px; }
+      aside { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo-block">
+      <div>
+        <div class="logo-title">G5 <em>RECOVERY</em></div>
+        <div class="logo-sub">Economic Dashboard · Post-COVID Analysis</div>
+      </div>
+    </div>
+    <nav class="nav-links">
+      <a href="/">Home</a>
+      <a href="/data">Data</a>
+      <a href="/analysis">Analysis</a>
+      <a href="/insights">Insights</a>
+      <a href="/dashboard" class="active">Dashboard</a>
+    </nav>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ── -->
+  <aside>
+
+    <!-- Countries -->
+    <div class="ctrl-section">
+      <div class="ctrl-label">Countries</div>
+      <div class="country-chips" id="country-chips">
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);padding:8px 0">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="ctrl-section">
+      <div class="ctrl-label">Metric</div>
+      <div class="metric-pills">
+        <div class="metric-pill active" data-metric="gdp_growth"   style="--pill-color:var(--c1)" onclick="selectMetric(this)">
+          <div class="pill-bar"></div>
+          <div class="pill-name">GDP Growth Rate</div>
+          <div class="pill-key">%/yr</div>
+        </div>
+        <div class="metric-pill" data-metric="inflation"    style="--pill-color:var(--c2)" onclick="selectMetric(this)">
+          <div class="pill-bar"></div>
+          <div class="pill-name">Inflation Rate</div>
+          <div class="pill-key">CPI %</div>
+        </div>
+        <div class="metric-pill" data-metric="unemployment" style="--pill-color:var(--c3)" onclick="selectMetric(this)">
+          <div class="pill-bar"></div>
+          <div class="pill-name">Unemployment Rate</div>
+          <div class="pill-key">% labour</div>
+        </div>
+        <div class="metric-pill" data-metric="gdp_value"    style="--pill-color:var(--c4)" onclick="selectMetric(this)">
+          <div class="pill-bar"></div>
+          <div class="pill-name">GDP Value</div>
+          <div class="pill-key">USD Bn</div>
+        </div>
+        <div class="metric-pill" data-metric="recovery_score" style="--pill-color:var(--c5)" onclick="selectMetric(this)">
+          <div class="pill-bar"></div>
+          <div class="pill-name">Recovery Score</div>
+          <div class="pill-key">pts</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart type -->
+    <div class="ctrl-section">
+      <div class="ctrl-label">Chart Type</div>
+      <div class="chart-type-row">
+        <button class="type-btn active" data-type="line" onclick="selectChartType(this)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Line
+        </button>
+        <button class="type-btn" data-type="bar" onclick="selectChartType(this)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
+          Bar
+        </button>
+        <button class="type-btn" data-type="radar" onclick="selectChartType(this)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/></svg>
+          Radar
+        </button>
+      </div>
+    </div>
+
+    <!-- Plot button -->
+    <button class="plot-btn" id="plot-btn" onclick="plotCharts()" disabled>
+      PLOT CHARTS
+    </button>
+
+    <!-- Status -->
+    <div class="sidebar-status" id="sidebar-status">
+      Select <span>countries</span> and a <span>metric</span>,<br>
+      then click <span>PLOT CHARTS</span>.
+    </div>
+
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main id="main-area">
+    <div class="empty-state" id="empty-state">
+      <svg class="empty-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="4" y="36" width="10" height="24" rx="2"/>
+        <rect x="20" y="24" width="10" height="36" rx="2"/>
+        <rect x="36" y="12" width="10" height="48" rx="2"/>
+        <rect x="52" y="20" width="10" height="40" rx="2"/>
+        <polyline points="9,36 25,24 41,12 57,20" stroke-width="2"/>
+      </svg>
+      <div class="empty-title">No Charts Yet</div>
+      <div class="empty-sub">
+        Pick one or more countries from the sidebar,<br>
+        choose a metric, then hit PLOT CHARTS.<br><br>
+        Selecting all countries will generate a<br>
+        <strong style="color:var(--c1)">comparative overlay chart</strong>.
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+const BASE = 'http://127.0.0.1:5000';
+
+// ── State ─────────────────────────────────────────────────────
+const state = {
+  countries: [],     // all available
+  selected: [],      // selected country names
+  metric: 'gdp_growth',
+  chartType: 'line',
+  charts: {}         // Chart.js instances keyed by canvas id
+};
+
+// ── Country colour palette ────────────────────────────────────
+const PALETTE = ['#e8ff47','#ff6b35','#00d4ff','#bf80ff','#ff3d6b'];
+
+// ── Metric config ─────────────────────────────────────────────
+const METRICS = {
+  gdp_growth:     { label:'GDP Growth Rate',    unit:'%',      color:'#e8ff47', col:'gdp_growth_rate' },
+  inflation:      { label:'Inflation Rate',     unit:'%',      color:'#ff6b35', col:'inflation_rate'  },
+  unemployment:   { label:'Unemployment Rate',  unit:'%',      color:'#00d4ff', col:'unemployment_rate'},
+  gdp_value:      { label:'GDP Value',          unit:'USD Bn', color:'#bf80ff', col:'gdp_value'       },
+  recovery_score: { label:'Recovery Score',     unit:'pts',    color:'#ff3d6b', col:'recovery_score'  }
+};
+
+// ── Boot ──────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res  = await fetch(`${BASE}/api/countries`);
+    const data = await res.json();
+    state.countries = data.countries || [];
+    renderCountryChips();
+  } catch {
+    document.getElementById('country-chips').innerHTML =
+      '<div style="font-family:Space Mono,monospace;font-size:10px;color:#f87171">Cannot reach server</div>';
+  }
+});
+
+// ── Render country chips ──────────────────────────────────────
+function renderCountryChips() {
+  const wrap = document.getElementById('country-chips');
+  wrap.innerHTML = '';
+
+  // "All Countries" chip
+  const allChip = makeChip('All Countries', '#ffffff', true);
+  allChip.dataset.country = '__all__';
+  allChip.addEventListener('click', () => toggleAll(allChip));
+  wrap.appendChild(allChip);
+
+  state.countries.forEach((c, i) => {
+    const color = PALETTE[i % PALETTE.length];
+    const chip  = makeChip(c, color, false);
+    chip.dataset.country = c;
+    chip.addEventListener('click', () => toggleCountry(chip, c));
+    wrap.appendChild(chip);
+  });
+}
+
+function makeChip(name, color, selected) {
+  const d = document.createElement('div');
+  d.className = 'country-chip' + (selected ? ' selected' : '');
+  d.style.setProperty('--chip-color', color);
+  d.innerHTML = `
+    <div class="chip-dot"></div>
+    <div class="chip-name">${name}</div>
+    <div class="chip-check">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>`;
+  return d;
+}
+
+function toggleCountry(chip, country) {
+  // deselect "All Countries" chip
+  const allChip = document.querySelector('[data-country="__all__"]');
+  if (allChip) allChip.classList.remove('selected');
+
+  chip.classList.toggle('selected');
+  const sel = new Set(state.selected);
+  if (chip.classList.contains('selected')) sel.add(country);
+  else sel.delete(country);
+  state.selected = [...sel];
+  updateStatus();
+}
+
+function toggleAll(allChip) {
+  const wasSelected = allChip.classList.contains('selected');
+  // clear individual
+  document.querySelectorAll('[data-country]:not([data-country="__all__"])').forEach(c => c.classList.remove('selected'));
+  if (!wasSelected) {
+    allChip.classList.add('selected');
+    state.selected = [...state.countries];
+  } else {
+    allChip.classList.remove('selected');
+    state.selected = [];
+  }
+  updateStatus();
+}
+
+function selectMetric(pill) {
+  document.querySelectorAll('.metric-pill').forEach(p => p.classList.remove('active'));
+  pill.classList.add('active');
+  state.metric = pill.dataset.metric;
+  updateStatus();
+}
+
+function selectChartType(btn) {
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.chartType = btn.dataset.type;
+}
+
+function updateStatus() {
+  const btn = document.getElementById('plot-btn');
+  const st  = document.getElementById('sidebar-status');
+  const m   = METRICS[state.metric];
+  const n   = state.selected.length;
+
+  btn.disabled = n === 0;
+
+  if (n === 0) {
+    st.innerHTML = `Select <span>countries</span> and a <span>metric</span>, then click <span>PLOT CHARTS</span>.`;
+  } else if (n === 1) {
+    st.innerHTML = `<span>${state.selected[0]}</span><br>${m.label} over time.`;
+  } else if (n === state.countries.length) {
+    st.innerHTML = `<span>All ${n} countries</span> selected.<br><span>Comparative</span> overlay chart<br>will be generated.`;
+  } else {
+    st.innerHTML = `<span>${n} countries</span> selected.<br>${m.label} — individual + comparison.`;
+  }
+}
+
+// ── PLOT ─────────────────────────────────────────────────────
+async function plotCharts() {
+  if (!state.selected.length) return;
+
+  const main  = document.getElementById('main-area');
+  const empty = document.getElementById('empty-state');
+  if (empty) empty.remove();
+
+  // destroy old charts
+  Object.values(state.charts).forEach(c => c.destroy());
+  state.charts = {};
+  main.innerHTML = '';
+
+  const m         = METRICS[state.metric];
+  const isAll     = state.selected.length === state.countries.length;
+  const isMulti   = state.selected.length > 1;
+
+  // top bar
+  main.innerHTML = `
+    <div class="main-topbar">
+      <div class="chart-heading">${m.label} <em>Analysis</em></div>
+      <div class="mode-badge">${isAll ? 'COMPARATIVE MODE' : isMulti ? 'MULTI-COUNTRY' : 'SINGLE COUNTRY'}</div>
+    </div>
+    <div class="charts-grid ${isAll||isMulti ? 'single' : 'single'}" id="charts-grid"></div>`;
+
+  const grid = document.getElementById('charts-grid');
+
+  // ── Fetch all data in parallel ────────────────────────────
+  const fetches = state.selected.map(country =>
+    fetch(`${BASE}/api/chart_data?country=${encodeURIComponent(country)}&metric=${state.metric}`)
+      .then(r => r.json())
+      .then(d => ({ country, data: d }))
+      .catch(() => ({ country, data: { error: 'Fetch failed' } }))
+  );
+  const results = await Promise.all(fetches);
+
+  // ── COMPARATIVE chart (all countries on one chart) ────────
+  if (isMulti) {
+    const compCard = document.createElement('div');
+    compCard.className = 'chart-card comparative';
+    compCard.style.animationDelay = '0s';
+    compCard.innerHTML = `
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-card-title" style="color:${m.color}">${m.label} — All Selected Countries</div>
+          <div class="chart-card-sub">Year-on-year comparison · ${m.unit}</div>
+        </div>
+        <span class="chart-tag" style="background:color-mix(in srgb,${m.color} 12%,transparent);color:${m.color};border:1px solid color-mix(in srgb,${m.color} 30%,transparent)">Comparative</span>
+      </div>
+      <div class="chart-body">
+        <canvas id="chart-comparative" height="${state.chartType==='radar'?'320':'200'}"></canvas>
+      </div>
+      <div class="legend-strip" id="legend-comparative"></div>`;
+    grid.appendChild(compCard);
+
+    // build datasets
+    const allYears = [...new Set(results.flatMap(r => (r.data.rows||[]).map(x => x.year)))].sort();
+    const datasets  = results.map((r, i) => {
+      const color  = PALETTE[i % PALETTE.length];
+      const rowMap = Object.fromEntries((r.data.rows||[]).map(x => [x.year, x.value]));
+      const vals   = allYears.map(y => rowMap[y] ?? null);
+      return {
+        label: r.country,
+        data: state.chartType === 'radar' ? vals : vals,
+        borderColor: color,
+        backgroundColor: state.chartType === 'bar'
+          ? color + '99'
+          : state.chartType === 'radar'
+          ? color + '22'
+          : 'transparent',
+        pointBackgroundColor: color,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 2,
+        tension: .35,
+        fill: state.chartType === 'radar',
+        spanGaps: true
+      };
+    });
+
+    const chartCfg = buildChartConfig(state.chartType, allYears, datasets, m);
+    const ctx = document.getElementById('chart-comparative').getContext('2d');
+    state.charts['comparative'] = new Chart(ctx, chartCfg);
+
+    // legend
+    const legendEl = document.getElementById('legend-comparative');
+    results.forEach((r, i) => {
+      const color = PALETTE[i % PALETTE.length];
+      legendEl.innerHTML += `
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:${color}"></div>
+          ${r.country}
+        </div>`;
+    });
+  }
+
+  // ── Individual charts per country ─────────────────────────
+  if (!isAll || state.selected.length <= 3) {
+    const individualGrid = document.createElement('div');
+    individualGrid.className = `charts-grid ${results.length === 1 ? 'single' : results.length === 2 ? 'double' : 'triple'}`;
+    individualGrid.style.marginTop = isMulti ? '4px' : '0';
+    grid.appendChild(individualGrid);
+
+    results.forEach((r, i) => {
+      const color = PALETTE[i % PALETTE.length];
+      const id    = `chart-${i}`;
+      const card  = document.createElement('div');
+      card.className = 'chart-card';
+      card.style.animationDelay = `${(i + (isMulti ? 1 : 0)) * .1}s`;
+
+      const rows  = r.data.rows || [];
+      const years = rows.map(x => x.year);
+      const vals  = rows.map(x => x.value);
+
+      // stats
+      const nums    = vals.filter(v => v != null);
+      const minV    = nums.length ? Math.min(...nums).toFixed(2) : '—';
+      const maxV    = nums.length ? Math.max(...nums).toFixed(2) : '—';
+      const avgV    = nums.length ? (nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2) : '—';
+      const trend   = nums.length >= 2 ? (nums[nums.length-1] > nums[0] ? '↑ Upward' : '↓ Downward') : '—';
+
+      card.innerHTML = `
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title" style="color:${color}">${r.country}</div>
+            <div class="chart-card-sub">${m.label} · ${m.unit} · ${years[0] ?? ''}–${years[years.length-1] ?? ''}</div>
+          </div>
+          <span class="chart-tag" style="background:color-mix(in srgb,${color} 12%,transparent);color:${color};border:1px solid color-mix(in srgb,${color} 30%,transparent)">
+            ${m.unit}
+          </span>
+        </div>
+        <div class="chart-body">
+          ${r.data.error
+            ? `<div class="chart-error">${r.data.error}</div>`
+            : `<canvas id="${id}" height="${state.chartType==='radar'?'260':'180'}"></canvas>`}
+        </div>
+        <div class="stat-chips">
+          <div class="stat-chip">Min <strong>${minV}${m.unit!=='USD Bn'?m.unit:''}</strong></div>
+          <div class="stat-chip">Max <strong>${maxV}${m.unit!=='USD Bn'?m.unit:''}</strong></div>
+          <div class="stat-chip">Avg <strong>${avgV}${m.unit!=='USD Bn'?m.unit:''}</strong></div>
+          <div class="stat-chip">Trend <strong>${trend}</strong></div>
+        </div>`;
+
+      individualGrid.appendChild(card);
+
+      if (!r.data.error && rows.length) {
+        const dataset = [{
+          label: r.country,
+          data: vals,
+          borderColor: color,
+          backgroundColor: state.chartType === 'bar'
+            ? color + 'bb'
+            : state.chartType === 'radar'
+            ? color + '33'
+            : color + '15',
+          pointBackgroundColor: color,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          borderWidth: 2.5,
+          tension: .35,
+          fill: state.chartType !== 'bar',
+          spanGaps: true
+        }];
+        const cfg = buildChartConfig(state.chartType, years, dataset, m);
+        const ctx = document.getElementById(id).getContext('2d');
+        state.charts[id] = new Chart(ctx, cfg);
+      }
+    });
+  }
+}
+
+// ── Chart.js config builder ───────────────────────────────────
+function buildChartConfig(type, labels, datasets, m) {
+  const isRadar = type === 'radar';
+  const isBar   = type === 'bar';
+
+  const commonScaleStyle = {
+    ticks: {
+      color: '#666',
+      font: { family: "'Space Mono', monospace", size: 9 }
+    },
+    grid: { color: 'rgba(255,255,255,.05)' },
+    border: { color: 'rgba(255,255,255,.08)' }
+  };
+
+  if (isRadar) {
+    return {
+      type: 'radar',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: tooltipStyle()
+        },
+        scales: {
+          r: {
+            ticks: { color: '#555', backdropColor: 'transparent', font: { family: "'Space Mono',monospace", size: 8 } },
+            grid:  { color: 'rgba(255,255,255,.07)' },
+            pointLabels: { color: '#888', font: { family: "'Space Mono',monospace", size: 9 } }
+          }
+        }
+      }
+    };
+  }
+
+  return {
+    type: isBar ? 'bar' : 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipStyle()
+      },
+      scales: {
+        x: {
+          ...commonScaleStyle,
+          title: { display: true, text: 'YEAR', color: '#444', font: { family:"'Space Mono',monospace", size:9 } }
+        },
+        y: {
+          ...commonScaleStyle,
+          title: { display: true, text: m.unit.toUpperCase(), color: '#444', font: { family:"'Space Mono',monospace", size:9 } }
+        }
+      }
+    }
+  };
+}
+
+function tooltipStyle() {
+  return {
+    backgroundColor: '#1a1a1a',
+    borderColor: '#333',
+    borderWidth: 1,
+    titleColor: '#e8ff47',
+    bodyColor: '#ccc',
+    titleFont: { family: "'Space Mono',monospace", size: 10 },
+    bodyFont:  { family: "'Space Mono',monospace", size: 10 },
+    padding: 10,
+    cornerRadius: 4
+  };
+}
+</script>
+</body>
+</html>
